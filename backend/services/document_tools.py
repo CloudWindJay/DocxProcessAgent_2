@@ -5,6 +5,7 @@ These tools operate directly on the physical .docx file on disk,
 locating paragraphs via their UUID bookmarks.
 """
 import os
+import logging
 from docx import Document
 from docx.oxml.ns import qn
 from sqlalchemy.orm import Session
@@ -18,6 +19,9 @@ from backend.services.ingestion import (
 )
 from backend.chromadb_client import add_chunks
 import uuid
+
+
+logger = logging.getLogger(__name__)
 
 
 def _find_paragraph_by_bookmark(doc: Document, bookmark_name: str):
@@ -75,7 +79,11 @@ def edit_docx_paragraph(
             from copy import deepcopy
             original_font_props = deepcopy(r_pr)
 
-    print(f"📖 [DocTool] Editing paragraph {paragraph_uuid}. Found: {target.text[:50]}...")
+    logger.info(
+        "Editing paragraph %s. Found text preview: %s",
+        paragraph_uuid,
+        target.text[:50],
+    )
 
     # Clear all existing runs
     for run in target.runs:
@@ -116,7 +124,7 @@ def delete_paragraph(
             "error": f"Paragraph with UUID {paragraph_uuid} not found.",
         }
 
-    print(f"🗑️ [DocTool] Deleting paragraph {paragraph_uuid}.")
+    logger.info("Deleting paragraph %s.", paragraph_uuid)
     
     # Remove the paragraph element from its parent
     parent = target._p.getparent()
@@ -149,7 +157,7 @@ def append_paragraph(
             "error": f"Paragraph with UUID {after_paragraph_uuid} not found.",
         }
 
-    print(f"➕ [DocTool] Appending paragraph after {after_paragraph_uuid}.")
+    logger.info("Appending paragraph after %s.", after_paragraph_uuid)
     
     # Create new paragraph element after the target
     from docx.oxml import OxmlElement

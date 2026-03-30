@@ -18,6 +18,9 @@ tiktoken==0.8.0
 # AI / LLM (OpenAI-compatible SDK for Qwen/DashScope)
 openai==1.58.1
 
+# MCP
+mcp[cli]>=1.2.0,<2.0
+
 # Auth
 passlib[bcrypt]==1.7.4
 python-jose[cryptography]==3.3.0
