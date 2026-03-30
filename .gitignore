@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+uploads/
+chroma_data/
+node_modules/
+dist/
+.vite/

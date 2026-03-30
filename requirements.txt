@@ -1,0 +1,27 @@
+# FastAPI & Server
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+
+# Database
+sqlalchemy==2.0.36
+pymysql==1.1.1
+cryptography==44.0.0
+
+# Vector Database
+chromadb==0.6.3
+
+# Document Processing
+python-docx==1.1.2
+tiktoken==0.8.0
+
+# AI / LLM (OpenAI-compatible SDK for Qwen/DashScope)
+openai==1.58.1
+
+# Auth
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+bcrypt==4.2.1
+
+# Utilities
+python-dotenv==1.0.1
