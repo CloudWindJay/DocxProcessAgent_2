@@ -2,7 +2,7 @@
 Pydantic schemas for request/response validation.
 """
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 
@@ -48,10 +48,69 @@ class FileUploadResponse(BaseModel):
     message: str = "File uploaded and processed successfully."
 
 
+class LLMSettingsResponse(BaseModel):
+    provider: Literal["qwen", "chatgpt", "gemini"]
+    use_env_key: bool
+    has_custom_api_key: bool
+    masked_custom_api_key: Optional[str] = None
+
+
+class LLMSettingsUpdateRequest(BaseModel):
+    provider: Literal["qwen", "chatgpt", "gemini"]
+    use_env_key: bool = True
+    api_key: Optional[str] = None
+
+
 # ── Agent Chat ────────────────────────────────────────
-class ChatRequest(BaseModel):
+class ConversationCreateRequest(BaseModel):
     file_id: str
+
+
+class ConversationResponse(BaseModel):
+    id: str
+    user_id: str
+    file_id: Optional[str] = None
+    conversation_type: str
+    title: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+    last_message_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class MessageResponse(BaseModel):
+    id: str
+    conversation_id: str
+    user_id: str
+    file_id: Optional[str] = None
+    role: str
+    content: str
+    tool_name: Optional[str] = None
+    tool_payload: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ConversationMessagesResponse(BaseModel):
+    conversation: ConversationResponse
+    messages: list[MessageResponse]
+
+
+class ChatRequest(BaseModel):
+    file_id: Optional[str] = None
     message: str
+
+
+class ConversationChatResponse(BaseModel):
+    conversation: ConversationResponse
+    user_message: MessageResponse
+    assistant_message: MessageResponse
+    file_updated: bool = False
 
 
 class ChatResponse(BaseModel):

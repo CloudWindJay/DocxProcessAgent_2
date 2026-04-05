@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import './App.css';
 import LoginPage from './components/LoginPage';
 import Sidebar from './components/Sidebar';
 import DocPreview from './components/DocPreview';
-import AgentChat from './components/AgentChat';
+import ConversationChat from './components/ConversationChat';
+import SettingsModal from './components/SettingsModal';
 import { listFiles, deleteFile } from './api/client';
 
 /**
@@ -18,9 +19,34 @@ export default function App() {
   const [files, setFiles] = useState([]);
   const [activeFileId, setActiveFileId] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Fetch files when user is authenticated
-  const fetchFiles = useCallback(async () => {
+  useEffect(() => {
+    if (!user) return;
+
+    let cancelled = false;
+
+    const loadFiles = async () => {
+      try {
+        const res = await listFiles();
+        if (!cancelled) {
+          setFiles(res.data);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Failed to fetch files:', err);
+        }
+      }
+    };
+
+    loadFiles();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const fetchFiles = async () => {
     if (!user) return;
     try {
       const res = await listFiles();
@@ -28,11 +54,7 @@ export default function App() {
     } catch (err) {
       console.error('Failed to fetch files:', err);
     }
-  }, [user]);
-
-  useEffect(() => {
-    fetchFiles();
-  }, [fetchFiles]);
+  };
 
   // ── Auth handlers ──
   const handleAuth = (userData) => {
@@ -104,6 +126,7 @@ export default function App() {
         onUploadStart={() => {}}
         onUploadComplete={handleUploadComplete}
         onDeleteFile={handleDeleteFile}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
 
       <DocPreview
@@ -112,13 +135,18 @@ export default function App() {
         refreshKey={refreshKey}
       />
 
-      <AgentChat
+      <ConversationChat
         activeFileId={activeFileId}
         activeFileName={activeFileName}
         onFileUpdated={handleFileUpdated}
         onUploadStart={() => {}}
         onUploadComplete={handleUploadComplete}
         onFilesChange={fetchFiles}
+      />
+
+      <SettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
       />
     </div>
   );

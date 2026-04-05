@@ -8,10 +8,7 @@ import {
 } from '../api/client';
 import ChatMessageContent from './ChatMessageContent';
 
-/**
- * AgentChat — AI chat panel with message history, file upload via "+", and typing indicator.
- */
-export default function AgentChat({
+export default function ConversationChat({
   activeFileId,
   activeFileName,
   onFileUpdated,
@@ -19,21 +16,20 @@ export default function AgentChat({
   onUploadComplete,
   onFilesChange,
 }) {
-  const [, setConversations] = useState([]);
+  const [conversations, setConversations] = useState([]);
   const [activeConversationId, setActiveConversationId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, sending]);
 
-  // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -53,6 +49,7 @@ export default function AgentChat({
     let cancelled = false;
 
     const loadConversations = async () => {
+      setLoadingHistory(true);
       try {
         const res = await listConversations(activeFileId);
         if (cancelled) return;
@@ -72,6 +69,10 @@ export default function AgentChat({
           setConversations([]);
           setActiveConversationId(null);
           setMessages([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingHistory(false);
         }
       }
     };
@@ -98,6 +99,21 @@ export default function AgentChat({
         content: message.content,
       }))
     );
+  };
+
+  const handleNewConversation = async () => {
+    if (!activeFileId) return;
+
+    try {
+      const res = await createConversation(activeFileId);
+      const nextConversation = res.data;
+      setConversations((prev) => [nextConversation, ...prev]);
+      setActiveConversationId(nextConversation.id);
+      setMessages([]);
+    } catch (err) {
+      console.error('Failed to create conversation:', err);
+      alert(err.response?.data?.detail || 'Failed to create a new chat.');
+    }
   };
 
   const handleSend = async () => {
@@ -146,13 +162,17 @@ export default function AgentChat({
       });
 
       if (fileUpdated) {
-        addMessage('system', '✅ Document has been updated. Preview refreshed.');
+        addMessage({
+          role: 'system',
+          content: 'Document has been updated. Preview refreshed.',
+          id: Date.now() + Math.random(),
+        });
         onFileUpdated?.();
       }
     } catch (err) {
       const errMsg =
         err.response?.data?.detail || 'Failed to get a response. Please try again.';
-      addMessage('error', errMsg);
+      addMessage({ role: 'error', content: errMsg, id: Date.now() + Math.random() });
     } finally {
       setSending(false);
     }
@@ -169,24 +189,35 @@ export default function AgentChat({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    addMessage('system', `📤 Uploading and analyzing ${file.name}...`);
+    addMessage({
+      role: 'system',
+      content: `Uploading and analyzing ${file.name}...`,
+      id: Date.now() + Math.random(),
+    });
     onUploadStart?.(file.name);
 
     try {
       const res = await uploadFile(file);
-      addMessage('system', `✅ ${file.name} uploaded and indexed successfully.`);
+      addMessage({
+        role: 'system',
+        content: `${file.name} uploaded and indexed successfully.`,
+        id: Date.now() + Math.random(),
+      });
       onUploadComplete?.(res.data);
       onFilesChange?.();
     } catch (err) {
       const errMsg = err.response?.data?.detail || 'Upload failed.';
-      addMessage('error', `❌ ${errMsg}`);
+      addMessage({
+        role: 'error',
+        content: errMsg,
+        id: Date.now() + Math.random(),
+      });
       onUploadComplete?.(null, errMsg);
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  // No file selected state
   if (!activeFileId) {
     return (
       <aside className="chat-panel">
@@ -194,8 +225,11 @@ export default function AgentChat({
           <span className="ai-dot" />
           <h2>AI Assistant</h2>
         </div>
+        <div className="chat-conversation-toolbar">
+          <div className="conversation-context">Select a file to load its chats</div>
+        </div>
         <div className="chat-empty">
-          <div className="ai-icon">🤖</div>
+          <div className="ai-icon">AI</div>
           <h3>Ready to Help</h3>
           <p>
             Select a document from the sidebar or upload a new one to start
@@ -210,7 +244,7 @@ export default function AgentChat({
               title="Upload a document"
               id="btn-chat-attach-empty"
             >
-              ＋
+              +
             </button>
             <textarea
               placeholder="Select a document first..."
@@ -233,21 +267,50 @@ export default function AgentChat({
 
   return (
     <aside className="chat-panel">
-      {/* Header */}
       <div className="chat-header">
         <span className="ai-dot" />
         <h2>AI Assistant</h2>
       </div>
 
-      {/* Messages */}
+      <div className="chat-conversation-toolbar">
+        <div className="conversation-context">
+          {activeFileName ? `Chats for ${activeFileName}` : 'File chat'}
+        </div>
+        <button className="btn-conversation-new" onClick={handleNewConversation}>
+          New Chat
+        </button>
+      </div>
+
+      <div className="conversation-list">
+        {conversations.map((conversation) => (
+          <button
+            key={conversation.id}
+            className={`conversation-chip ${
+              conversation.id === activeConversationId ? 'active' : ''
+            }`}
+            onClick={() => loadMessages(conversation.id)}
+          >
+            <span className="conversation-chip-title">{conversation.title}</span>
+          </button>
+        ))}
+      </div>
+
       <div className="chat-messages">
-        {messages.length === 0 && (
+        {loadingHistory && (
           <div className="chat-empty">
-            <div className="ai-icon">🤖</div>
-            <h3>Chat about {activeFileName}</h3>
+            <div className="ai-icon">...</div>
+            <h3>Loading chat history</h3>
+          </div>
+        )}
+
+        {!loadingHistory && messages.length === 0 && (
+          <div className="chat-empty">
+            <div className="ai-icon">AI</div>
+            <h3>{activeConversationId ? `Chat about ${activeFileName}` : 'Start a new chat'}</h3>
             <p>
-              Ask me to edit, summarize, shorten, or rewrite any part of the
-              document. Try: "Change the title to Q3 Report"
+              {activeConversationId
+                ? 'Ask me to edit, summarize, shorten, or rewrite any part of the document.'
+                : 'Create a new chat or send a message to begin a file-scoped conversation.'}
             </p>
           </div>
         )}
@@ -269,7 +332,6 @@ export default function AgentChat({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
       <div className="chat-input-area">
         <div className="chat-input-wrapper">
           <button
@@ -278,7 +340,7 @@ export default function AgentChat({
             title="Upload a new document"
             id="btn-chat-attach"
           >
-            ＋
+            +
           </button>
           <textarea
             ref={textareaRef}
@@ -297,7 +359,7 @@ export default function AgentChat({
             title="Send message"
             id="btn-chat-send"
           >
-            ➤
+            {'->'}
           </button>
           <input
             ref={fileInputRef}

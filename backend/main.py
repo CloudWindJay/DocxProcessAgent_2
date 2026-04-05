@@ -8,7 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.config import settings
 from backend.database import engine, Base
-from backend.routers import auth_router, upload, files, agent
+from backend.schema_bootstrap import ensure_user_llm_settings_columns
+from backend.routers import auth_router, upload, files, agent, conversations, settings_router
 
 
 @asynccontextmanager
@@ -18,6 +19,8 @@ async def lifespan(app: FastAPI):
     # Create all database tables
     Base.metadata.create_all(bind=engine)
     print("✅ Database tables created.")
+    ensure_user_llm_settings_columns(engine)
+    print("✅ User LLM settings columns ready.")
 
     # Ensure upload directory exists
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
@@ -58,6 +61,8 @@ app.include_router(auth_router.router)
 app.include_router(upload.router)
 app.include_router(files.router)
 app.include_router(agent.router)
+app.include_router(conversations.router)
+app.include_router(settings_router.router)
 
 
 @app.get("/")

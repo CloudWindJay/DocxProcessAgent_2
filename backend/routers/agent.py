@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
+from backend.llm.factory import get_user_llm_provider
 from backend.models import User, File as FileModel
 from backend.schemas import ChatRequest, ChatResponse
 from backend.auth import get_current_user
@@ -25,6 +26,9 @@ def agent_chat(
     edit the document via function calling.
     """
     # Verify file ownership
+    if not payload.file_id:
+        raise HTTPException(status_code=400, detail="file_id is required for this endpoint.")
+
     db_file = (
         db.query(FileModel)
         .filter(FileModel.id == payload.file_id, FileModel.user_id == current_user.id)
@@ -38,6 +42,8 @@ def agent_chat(
         user_id=current_user.id,
         file_id=payload.file_id,
         user_message=payload.message,
+        file_name=db_file.filename,
+        llm_provider=get_user_llm_provider(current_user),
     )
 
     return ChatResponse(

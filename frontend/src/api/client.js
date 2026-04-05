@@ -61,4 +61,21 @@ export const uploadFile = (file) => {
 export const sendMessage = (fileId, message) =>
   api.post('/agent/chat', { file_id: fileId, message });
 
+export const createConversation = (fileId) =>
+  api.post('/conversations', { file_id: fileId });
+
+export const listConversations = (fileId) =>
+  api.get('/conversations', { params: fileId ? { file_id: fileId } : {} });
+
+export const getConversationMessages = (conversationId) =>
+  api.get(`/conversations/${conversationId}/messages`);
+
+export const sendConversationMessage = (conversationId, message) =>
+  api.post(`/conversations/${conversationId}/messages`, { message });
+
+export const getLLMSettings = () => api.get('/settings/llm');
+
+export const updateLLMSettings = (payload) =>
+  api.patch('/settings/llm', payload);
+
 export default api;

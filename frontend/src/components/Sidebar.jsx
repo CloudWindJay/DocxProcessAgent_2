@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react';
-import { listFiles, uploadFile } from '../api/client';
-import { useEffect } from 'react';
+import { uploadFile } from '../api/client';
 
 /**
  * Sidebar — file management panel with upload, file list, and user info.
@@ -15,6 +14,7 @@ export default function Sidebar({
   onUploadStart,
   onUploadComplete,
   onDeleteFile,
+  onOpenSettings,
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -137,6 +137,14 @@ export default function Sidebar({
         <div className="user-info">
           <span>{user?.username}</span>
         </div>
+        <button
+          className="btn-settings"
+          onClick={onOpenSettings}
+          title="LLM Settings"
+          id="btn-open-settings"
+        >
+          ⚙
+        </button>
         <button
           className="btn-logout"
           onClick={onLogout}

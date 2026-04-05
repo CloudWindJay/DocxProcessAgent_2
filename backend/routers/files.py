@@ -7,10 +7,10 @@ from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.models import User, File as FileModel
+from backend.models import Conversation, User, File as FileModel
 from backend.schemas import FileResponse as FileSchema
 from backend.auth import get_current_user
-from backend.chromadb_client import delete_file_chunks
+from backend.chromadb_client import delete_conversation_turns, delete_file_chunks
 
 router = APIRouter(prefix="/api/files", tags=["Files"])
 
@@ -81,11 +81,17 @@ def delete_file(
         except Exception as e:
             print(f"Error deleting physical file: {e}")
 
-    # 3. Clean up ChromaDB chunks
+    # 3. Clean up ChromaDB chunks and conversation memory
     try:
         delete_file_chunks(file_id)
     except Exception as e:
         print(f"Error deleting ChromaDB chunks: {e}")
+
+    for conversation in db.query(Conversation).filter(Conversation.file_id == file_id).all():
+        try:
+            delete_conversation_turns(conversation.id)
+        except Exception as e:
+            print(f"Error deleting conversation memory: {e}")
 
     # 4. Delete database record
     db.delete(db_file)
