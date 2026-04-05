@@ -6,3 +6,4 @@ chroma_data/
 node_modules/
 dist/
 .vite/
+MCP_LEARNING_GUIDE.md
